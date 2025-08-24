@@ -76,36 +76,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, userData: { name: string, user_type: 'student' | 'employer', company_name?: string }) => {
-    // Check if email already exists in auth.users
-    const { data: existingUser, error: searchError } = await supabase
-      .from('users')
-      .select('email')
-      .eq('email', email.toLowerCase())
-      .single()
+    try {
+      // First create the auth user
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData
+        }
+      })
 
-    if (existingUser) {
-      throw new Error('An account with this email already exists')
-    }
+      if (error) throw error
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData
+      // If user was created successfully, manually create the profile
+      if (data.user && !data.user.email_confirmed_at) {
+        try {
+          const { error: profileError } = await supabase
+            .from('users')
+            .insert({
+              id: data.user.id,
+              email: email.toLowerCase(),
+              name: userData.name,
+              user_type: userData.user_type,
+              company_name: userData.company_name || null,
+              age: null,
+              bio: null
+            })
+
+          if (profileError) {
+            console.error('Profile creation error:', profileError)
+            // Don't throw here as the auth user was created successfully
+          }
+        } catch (profileErr) {
+          console.error('Failed to create profile:', profileErr)
+          // Don't throw here as the auth user was created successfully
+        }
       }
-    })
 
-    if (error) throw error
-
-    // The database trigger will automatically create the user profile
-    // Wait a moment for the trigger to execute, then fetch the profile
-    if (data.user) {
-      setTimeout(async () => {
-        await fetchProfile(data.user!.id)
-      }, 1000)
+      return data
+    } catch (err: any) {
+      throw new Error(err.message || 'Failed to create account')
     }
-
-    return data
   }
 
   const signIn = async (email: string, password: string) => {
