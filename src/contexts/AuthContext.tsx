@@ -76,6 +76,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, userData: { name: string, user_type: 'student' | 'employer', company_name?: string }) => {
+    // Check if email already exists in auth.users
+    const { data: existingUser, error: searchError } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email.toLowerCase())
+      .single()
+
+    if (existingUser) {
+      throw new Error('An account with this email already exists')
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

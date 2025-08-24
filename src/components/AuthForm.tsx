@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { EmailConfirmationModal } from '@/components/EmailConfirmationModal'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -16,7 +17,7 @@ export function AuthForm() {
   const [companyName, setCompanyName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false)
 
   const { signIn, signUp } = useAuth()
 
@@ -24,7 +25,6 @@ export function AuthForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    setSuccess('')
 
     try {
       if (mode === 'signin') {
@@ -37,12 +37,12 @@ export function AuthForm() {
         })
         
         if (result && !result.error) {
-          setSuccess('Account created! Please check your email to confirm your account.')
+          setShowConfirmationModal(true)
           // Clear form
-          setEmail('')
           setPassword('')
           setName('')
           setCompanyName('')
+          // Keep email for the confirmation modal
         }
       }
     } catch (err: any) {
@@ -50,6 +50,12 @@ export function AuthForm() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCloseModal = () => {
+    setShowConfirmationModal(false)
+    setEmail('') // Clear email after modal is closed
+    setMode('signin') // Switch back to signin mode
   }
 
   return (
@@ -138,12 +144,6 @@ export function AuthForm() {
             <div className="text-red-600 text-sm text-center">{error}</div>
           )}
 
-          {success && (
-            <div className="text-green-600 text-sm text-center bg-green-50 border border-green-200 rounded-md p-3">
-              {success}
-            </div>
-          )}
-
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
           </Button>
@@ -162,6 +162,12 @@ export function AuthForm() {
           </button>
         </div>
       </div>
+
+      <EmailConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={handleCloseModal}
+        email={email}
+      />
     </div>
   )
 }
