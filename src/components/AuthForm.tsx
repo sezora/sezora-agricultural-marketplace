@@ -16,6 +16,7 @@ export function AuthForm() {
   const [companyName, setCompanyName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const { signIn, signUp } = useAuth()
 
@@ -23,16 +24,26 @@ export function AuthForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       if (mode === 'signin') {
         await signIn(email, password)
       } else {
-        await signUp(email, password, {
+        const result = await signUp(email, password, {
           name,
           user_type: userType,
           company_name: userType === 'employer' ? companyName : undefined
         })
+        
+        if (result && !result.error) {
+          setSuccess('Account created! Please check your email to confirm your account.')
+          // Clear form
+          setEmail('')
+          setPassword('')
+          setName('')
+          setCompanyName('')
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred')
@@ -125,6 +136,12 @@ export function AuthForm() {
 
           {error && (
             <div className="text-red-600 text-sm text-center">{error}</div>
+          )}
+
+          {success && (
+            <div className="text-green-600 text-sm text-center bg-green-50 border border-green-200 rounded-md p-3">
+              {success}
+            </div>
           )}
 
           <Button type="submit" className="w-full" disabled={loading}>
